@@ -2,8 +2,21 @@ import torch
 from einops import rearrange
 from torch import Tensor, nn
 
+from .conditioning import ConditionScale2Shift, ConditionScaleShift
 from .norms import LayerNorm2d
 from .types import ActConstructor, NormConstructor
+
+
+class IdentityBlock(nn.Module):
+    def __init__(
+        self,
+        channels: int,
+        condition_dim: int | None = None,
+    ):
+        super().__init__()
+
+    def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
+        return x
 
 
 class ResBlock(nn.Module):
@@ -16,6 +29,7 @@ class ResBlock(nn.Module):
     def __init__(
         self,
         channels: int,
+        condition_dim: int | None = None,
         kernel_size: int = 3,
         norm_layer: NormConstructor = LayerNorm2d,
         act_layer: ActConstructor = nn.SiLU,
@@ -34,9 +48,19 @@ class ResBlock(nn.Module):
         if self.conv2.bias is not None:
             nn.init.zeros_(self.conv2.bias)
 
-    def forward(self, x: Tensor) -> Tensor:
+        if condition_dim is not None:
+            self.cond_proj = ConditionScaleShift(condition_dim, channels)
+
+    def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
         h = self.conv1(self.act(self.norm1(x)))
-        h = self.conv2(self.act(self.norm2(h)))
+
+        h = self.norm2(h)
+
+        if c is not None:
+            scale, shift = self.cond_proj(c)
+            h = h * (1 + scale) + shift
+
+        h = self.conv2(self.act(h))
         return x + h
 
 
@@ -50,6 +74,7 @@ class ConvNextBlock(nn.Module):
     def __init__(
         self,
         channels: int,
+        condition_dim: int | None = None,
         kernel_size: int = 7,
         expand_factor: float = 4.0,
         layer_scale_init: float = 1e-6,
@@ -74,9 +99,15 @@ class ConvNextBlock(nn.Module):
         self.contract = nn.Conv2d(hidden_dim, channels, 1)
         self.scale = nn.Parameter(torch.full((channels, 1, 1), layer_scale_init))
 
-    def forward(self, x: Tensor) -> Tensor:
+        if condition_dim is not None:
+            self.cond_proj = ConditionScaleShift(condition_dim, channels)
+
+    def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
         h = self.dwconv(x)
         h = self.norm(h)
+        if c is not None:
+            scale, shift = self.cond_proj(c)
+            h = h * (1 + scale) + shift
         h = self.expand(h)
         h = self.act(h)
         h = self.contract(h)
@@ -150,6 +181,7 @@ class RestormerBlock(nn.Module):
     def __init__(
         self,
         channels: int,
+        condition_dim: int | None = None,
         head_dim: int = 32,
         ffn_expand_factor: float = 4.0,
         norm_layer: NormConstructor = LayerNorm2d,
@@ -163,7 +195,24 @@ class RestormerBlock(nn.Module):
         self.attn = RestormerAttention(channels, head_dim)
         self.ffn = RestormerFFN(channels, ffn_expand_factor, act_layer)
 
-    def forward(self, x: Tensor) -> Tensor:
-        x = x + self.attn(self.norm1(x))
-        x = x + self.ffn(self.norm2(x))
+        if condition_dim is not None:
+            self.cond_proj1 = ConditionScale2Shift(condition_dim, channels)
+            self.cond_proj2 = ConditionScale2Shift(condition_dim, channels)
+
+    def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
+        if c is not None:
+            scale1_1, shift1, scale1_2 = self.cond_proj1(c)
+            scale2_1, shift2, scale2_2 = self.cond_proj2(c)
+        else:
+            scale1_1, shift1, scale1_2 = 0.0, 0.0, 0.0
+            scale2_1, shift2, scale2_2 = 0.0, 0.0, 0.0
+
+        h = self.norm1(x) * (1 + scale1_1) + shift1
+        h = self.attn(h)
+        x = x + h * scale1_2
+
+        h = self.norm2(x) * (1 + scale2_1) + shift2
+        h = self.ffn(h)
+        x = x + h * scale2_2
+
         return x

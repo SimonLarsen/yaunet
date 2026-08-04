@@ -2,7 +2,7 @@ from collections.abc import Sequence
 
 from torch import Tensor, nn
 
-from .blocks import ResBlock
+from .blocks import IdentityBlock, ResBlock
 from .types import BlockConstructor, FuseMethod, InterpolationMethod, UpsampleMethod
 from .unet import UNet
 
@@ -38,7 +38,7 @@ class UNetWrapper(nn.Module):
             upsample_method=upsample_method,
             interpolation=interpolation,
             down_block_layer=down_block_layer,
-            mid_block_layer=lambda c: nn.Identity(),
+            mid_block_layer=IdentityBlock,
             up_block_layer=up_block_layer,
         )
 

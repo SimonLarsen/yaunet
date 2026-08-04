@@ -12,6 +12,7 @@ class DownBlock(nn.Module):
         self,
         in_channels: int,
         out_channels: int,
+        condition_dim: int | None = None,
         depth: int = 1,
         downsample: bool = False,
         block_layer: BlockConstructor = ResBlock,
@@ -25,13 +26,14 @@ class DownBlock(nn.Module):
         else:
             self.downsample = nn.Identity()
 
-        self.blocks = nn.Sequential()
+        self.blocks = nn.ModuleList()
         for _ in range(depth):
-            self.blocks.append(block_layer(out_channels))
+            self.blocks.append(block_layer(out_channels, condition_dim))
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
         h = self.downsample(x)
-        h = self.blocks(h)
+        for block in self.blocks:
+            h = block(h, c)
         return h
 
 
@@ -41,6 +43,7 @@ class UpBlock(nn.Module):
         in_channels: int,
         skip_channels: int,
         out_channels: int,
+        condition_dim: int | None = None,
         depth: int = 1,
         fuse_method: FuseMethod = "concat",
         upsample_method: UpsampleMethod = "pixel-shuffle",
@@ -75,11 +78,11 @@ class UpBlock(nn.Module):
         else:
             raise ValueError(f"Unknown fuse method {fuse_method}")
 
-        self.blocks = nn.Sequential()
+        self.blocks = nn.ModuleList()
         for _ in range(depth):
-            self.blocks.append(block_layer(out_channels))
+            self.blocks.append(block_layer(out_channels, condition_dim))
 
-    def forward(self, x: Tensor, x_skip: Tensor) -> Tensor:
+    def forward(self, x: Tensor, x_skip: Tensor, c: Tensor | None = None) -> Tensor:
         h = self.fuse_proj(self.upsample(x))
 
         if self.fuse_method == "add":
@@ -88,15 +91,18 @@ class UpBlock(nn.Module):
             h = torch.cat((h, x_skip), dim=1)
             h = self.fuse(h)
 
-        h = self.blocks(h)
+        for block in self.blocks:
+            h = block(h, c)
         return h
 
 
 class UNet(nn.Module):
+    """U-Net model."""
     def __init__(
         self,
         in_channels: int,
         out_channels: int,
+        condition_dim: int | None = None,
         down_widths: Sequence[int] = (32, 64, 128, 256),
         down_depths: Sequence[int] = (2, 2, 2, 8),
         mid_width: int = 512,
@@ -132,6 +138,7 @@ class UNet(nn.Module):
                 DownBlock(
                     in_channels=prev_channels,
                     out_channels=down_widths[i],
+                    condition_dim=condition_dim,
                     depth=down_depths[i],
                     downsample=i > 0,
                     block_layer=down_block_layer[i],
@@ -142,6 +149,7 @@ class UNet(nn.Module):
         self.mid: nn.Module = DownBlock(
             in_channels=prev_channels,
             out_channels=mid_width,
+            condition_dim=condition_dim,
             depth=mid_depth,
             downsample=True,
             block_layer=mid_block_layer,
@@ -155,6 +163,7 @@ class UNet(nn.Module):
                     in_channels=prev_channels,
                     skip_channels=down_widths[-1 - i],
                     out_channels=up_widths[i],
+                    condition_dim=condition_dim,
                     depth=up_depths[i],
                     fuse_method=fuse_method,
                     upsample_method=upsample_method,
@@ -166,22 +175,22 @@ class UNet(nn.Module):
 
         self.proj_out = nn.Conv2d(up_widths[-1], out_channels, 1)
 
-    def encode(self, x: Tensor) -> list[Tensor]:
+    def encode(self, x: Tensor, c: Tensor | None = None) -> list[Tensor]:
         features = []
         h = x
         for block in self.down:
-            h = block(h)
+            h = block(h, c)
             features.append(h)
-        features.append(self.mid(h))
+        features.append(self.mid(h, c))
         return features
 
-    def decode(self, features: Sequence[Tensor]) -> Tensor:
+    def decode(self, features: Sequence[Tensor], c: Tensor | None = None) -> Tensor:
         h = features[-1]
         for i in range(len(self.up)):
-            h = self.up[i](h, features[-2 - i])
+            h = self.up[i](h, features[-2 - i], c)
         return h
 
-    def forward(self, x: Tensor) -> Tensor:
-        features = self.encode(x)
-        output = self.decode(features)
+    def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
+        features = self.encode(x, c)
+        output = self.decode(features, c)
         return self.proj_out(output)
