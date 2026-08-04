@@ -8,6 +8,8 @@ from .types import ActConstructor, NormConstructor
 
 
 class IdentityBlock(nn.Module):
+    """Identity block. Does nothing."""
+
     def __init__(
         self,
         channels: int,

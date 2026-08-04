@@ -1,0 +1,47 @@
+site_name: yaunet
+
+nav:
+- Getting started: index.md
+- Reference:
+  - Models: reference/models.md
+  - Blocks: reference/blocks.md
+  - Norms: reference/norms.md
+
+theme:
+  name: material
+
+plugins:
+- search
+- autorefs
+- mkdocstrings:
+    default_handler: python
+    handlers:
+      python:
+        options:
+          docstring_style: numpy
+          modernize_annotations: false
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
+          show_signature_annotations: false
+          separate_signature: true
+          signature_crossrefs: true
+          merge_init_into_class: true
+          parameter_headings: true
+          show_root_heading: true
+          docstring_options:
+            ignore_init_summary: true
+          show_source: false
+          docstring_section_style: list
+
+markdown_extensions:
+- pymdownx.highlight:
+    anchor_linenums: true
+    line_spans: __span
+    pygments_lang_class: true
+- pymdownx.inlinehilite
+- pymdownx.snippets
+- pymdownx.superfences
+- pymdownx.tabbed:
+    alternate_style: true
+- attr_list
+- md_in_html

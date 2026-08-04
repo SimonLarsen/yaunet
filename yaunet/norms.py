@@ -2,6 +2,8 @@ from torch import Tensor, nn
 
 
 class LayerNorm2d(nn.Module):
+    """Layer norm for channel dimension of (N, C, H, W) tensor."""
+
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.norm = nn.LayerNorm(*args, **kwargs)
@@ -14,6 +16,8 @@ class LayerNorm2d(nn.Module):
 
 
 class RMSNorm2d(nn.Module):
+    """RMS norm for channel dimension of (N, C, H, W) tensor."""
+
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.norm = nn.RMSNorm(*args, **kwargs)

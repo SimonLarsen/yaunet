@@ -98,6 +98,7 @@ class UpBlock(nn.Module):
 
 class UNet(nn.Module):
     """U-Net model."""
+
     def __init__(
         self,
         in_channels: int,

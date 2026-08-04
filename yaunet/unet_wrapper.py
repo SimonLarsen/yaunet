@@ -8,6 +8,8 @@ from .unet import UNet
 
 
 class UNetWrapper(nn.Module):
+    """U-Net shell for wrapping other models."""
+
     def __init__(
         self,
         in_channels: int,
