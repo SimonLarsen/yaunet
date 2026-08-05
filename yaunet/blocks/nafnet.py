@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor, nn
 
-from ..conditioning import ConditionScale2Shift
+from ..conditioning import ConditionScaleShiftGate
 from ..norms import LayerNorm2d
 from ..types import NormConstructor
 
@@ -30,6 +30,7 @@ class NAFNetBlock(nn.Module):
 
     See: https://arxiv.org/abs/2204.04676
     """
+
     def __init__(
         self,
         channels: int,
@@ -71,31 +72,31 @@ class NAFNetBlock(nn.Module):
         self.contract2 = nn.Conv2d(ffn_channels // 2, channels, 1)
 
         if condition_dim is not None:
-            self.cond_proj1 = ConditionScale2Shift(condition_dim, channels)
-            self.cond_proj2 = ConditionScale2Shift(condition_dim, channels)
+            self.cond_proj1 = ConditionScaleShiftGate(condition_dim, channels)
+            self.cond_proj2 = ConditionScaleShiftGate(condition_dim, channels)
         else:
-            self.scale1 = nn.Parameter(torch.zeros(channels, 1, 1))
-            self.scale2 = nn.Parameter(torch.zeros(channels, 1, 1))
+            self.gate1 = nn.Parameter(torch.zeros(channels, 1, 1))
+            self.gate2 = nn.Parameter(torch.zeros(channels, 1, 1))
 
     def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
         if c is not None:
-            scale1_1, shift1, scale1_2 = self.cond_proj1(c)
-            scale2_1, shift2, scale2_2 = self.cond_proj2(c)
+            scale1, shift1, gate1 = self.cond_proj1(c)
+            scale2, shift2, gate2 = self.cond_proj2(c)
         else:
-            scale1_1, shift1, scale1_2 = 0.0, 0.0, self.scale1
-            scale2_1, shift2, scale2_2 = 0.0, 0.0, self.scale2
+            scale1, shift1, gate1 = 0.0, 0.0, self.gate1
+            scale2, shift2, gate2 = 0.0, 0.0, self.gate2
 
-        h = self.norm1(x) * (1 + scale1_1) + shift1
+        h = self.norm1(x) * (1 + scale1) + shift1
         h = self.dwconv(self.expand1(h))
         h = self.sg(h)
         h = self.sca(h)
         h = self.contract1(h)
-        x = x + h * scale1_2
+        x = x + h * gate1
 
-        h = self.norm2(x) * (1 + scale2_1) + shift2
+        h = self.norm2(x) * (1 + scale2) + shift2
         h = self.expand2(h)
         h = self.sg(h)
         h = self.contract2(h)
-        x = x + h * scale2_2
+        x = x + h * gate2
 
         return x

@@ -2,7 +2,7 @@ import torch
 from einops import rearrange
 from torch import Tensor, nn
 
-from ..conditioning import ConditionScale2Shift
+from ..conditioning import ConditionScaleShiftGate
 from ..norms import LayerNorm2d
 from ..types import ActConstructor, NormConstructor
 
@@ -107,23 +107,23 @@ class RestormerBlock(nn.Module):
         self.ffn = RestormerFFN(channels, ffn_expand_factor, act_layer)
 
         if condition_dim is not None:
-            self.cond_proj1 = ConditionScale2Shift(condition_dim, channels)
-            self.cond_proj2 = ConditionScale2Shift(condition_dim, channels)
+            self.cond_proj1 = ConditionScaleShiftGate(condition_dim, channels)
+            self.cond_proj2 = ConditionScaleShiftGate(condition_dim, channels)
 
     def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
         if c is not None:
-            scale1_1, shift1, scale1_2 = self.cond_proj1(c)
-            scale2_1, shift2, scale2_2 = self.cond_proj2(c)
+            scale1, shift1, gate1 = self.cond_proj1(c)
+            scale2, shift2, gate2 = self.cond_proj2(c)
         else:
-            scale1_1, shift1, scale1_2 = 0.0, 0.0, 0.0
-            scale2_1, shift2, scale2_2 = 0.0, 0.0, 0.0
+            scale1, shift1, gate1 = 0.0, 0.0, 1.0
+            scale2, shift2, gate2 = 0.0, 0.0, 1.0
 
-        h = self.norm1(x) * (1 + scale1_1) + shift1
+        h = self.norm1(x) * (1 + scale1) + shift1
         h = self.attn(h)
-        x = x + h * scale1_2
+        x = x + h * gate1
 
-        h = self.norm2(x) * (1 + scale2_1) + shift2
+        h = self.norm2(x) * (1 + scale2) + shift2
         h = self.ffn(h)
-        x = x + h * scale2_2
+        x = x + h * gate2
 
         return x

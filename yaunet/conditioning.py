@@ -23,7 +23,7 @@ class ConditionScaleShift(nn.Module):
         return scale, shift
 
 
-class ConditionScale2Shift(nn.Module):
+class ConditionScaleShiftGate(nn.Module):
     def __init__(
         self,
         condition_dim: int,
@@ -36,9 +36,9 @@ class ConditionScale2Shift(nn.Module):
         nn.init.zeros_(self.proj.bias)
 
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor, Tensor]:
-        scale1, shift, scale2 = rearrange(
+        scale, shift, gate = rearrange(
             self.proj(x),
             "b (ch c) -> ch b c 1 1",
             ch=3,
         )
-        return scale1, shift, scale2
+        return scale, shift, gate
