@@ -3,7 +3,7 @@ from collections.abc import Sequence
 import torch
 from torch import Tensor, nn
 
-from .blocks import ResBlock
+from .blocks import ResNetBlock
 from .types import BlockConstructor, FuseMethod, InterpolationMethod, UpsampleMethod
 
 
@@ -15,7 +15,7 @@ class DownBlock(nn.Module):
         condition_dim: int | None = None,
         depth: int = 1,
         downsample: bool = False,
-        block_layer: BlockConstructor = ResBlock,
+        block_layer: BlockConstructor = ResNetBlock,
     ):
         super().__init__()
 
@@ -48,7 +48,7 @@ class UpBlock(nn.Module):
         fuse_method: FuseMethod = "concat",
         upsample_method: UpsampleMethod = "pixel-shuffle",
         interpolation: InterpolationMethod = "nearest-exact",
-        block_layer: BlockConstructor = ResBlock,
+        block_layer: BlockConstructor = ResNetBlock,
     ):
         super().__init__()
 
@@ -113,9 +113,9 @@ class UNet(nn.Module):
         fuse_method: FuseMethod = "concat",
         upsample_method: UpsampleMethod = "pixel-shuffle",
         interpolation: InterpolationMethod = "nearest-exact",
-        down_block_layer: BlockConstructor | Sequence[BlockConstructor] = ResBlock,
-        mid_block_layer: BlockConstructor = ResBlock,
-        up_block_layer: BlockConstructor | Sequence[BlockConstructor] = ResBlock,
+        down_block_layer: BlockConstructor | Sequence[BlockConstructor] = ResNetBlock,
+        mid_block_layer: BlockConstructor = ResNetBlock,
+        up_block_layer: BlockConstructor | Sequence[BlockConstructor] = ResNetBlock,
     ):
         super().__init__()
 
