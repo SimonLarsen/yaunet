@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor, nn
 
-from ..conditioning import ConditionScaleShift
+from ..conditioning import ConditionScaleShiftGate
 from ..norms import LayerNorm2d
 from ..types import ActConstructor, NormConstructor
 
@@ -62,15 +62,17 @@ class ConvNextBlock(nn.Module):
         self.scale = nn.Parameter(torch.full((channels, 1, 1), layer_scale_init))
 
         if condition_dim is not None:
-            self.cond_proj = ConditionScaleShift(condition_dim, channels)
+            self.cond_proj = ConditionScaleShiftGate(condition_dim, channels)
 
     def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
-        h = self.dwconv(x)
-        h = self.norm(h)
         if c is not None:
-            scale, shift = self.cond_proj(c)
-            h = h * (1 + scale) + shift
+            scale, shift, gate = self.cond_proj(c)
+        else:
+            scale, shift, gate = 0.0, 0.0, 1.0
+
+        h = self.dwconv(x)
+        h = self.norm(h) * (1 + scale) + shift
         h = self.expand(h)
         h = self.act(h)
         h = self.contract(h)
-        return x + h * self.scale
+        return x + h * gate * self.scale

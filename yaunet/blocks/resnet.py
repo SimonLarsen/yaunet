@@ -1,6 +1,6 @@
 from torch import Tensor, nn
 
-from ..conditioning import ConditionScaleShift
+from ..conditioning import ConditionScaleShiftGate
 from ..norms import LayerNorm2d
 from ..types import ActConstructor, NormConstructor
 
@@ -51,16 +51,15 @@ class ResNetBlock(nn.Module):
             nn.init.zeros_(self.conv2.bias)
 
         if condition_dim is not None:
-            self.cond_proj = ConditionScaleShift(condition_dim, channels)
+            self.cond_proj = ConditionScaleShiftGate(condition_dim, channels)
 
     def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
-        h = self.conv1(self.act(self.norm1(x)))
-
-        h = self.norm2(h)
-
         if c is not None:
-            scale, shift = self.cond_proj(c)
-            h = h * (1 + scale) + shift
+            scale, shift, gate = self.cond_proj(c)
+        else:
+            scale, shift, gate = 0.0, 0.0, 1.0
 
+        h = self.conv1(self.act(self.norm1(x)))
+        h = self.norm2(h) * (1 + scale) + shift
         h = self.conv2(self.act(h))
-        return x + h
+        return x + h * gate
