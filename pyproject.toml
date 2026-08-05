@@ -5,8 +5,8 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=2.2.6",
-    "torch>=2.13.0",
     "einops>=0.8.2",
+    "torch>=2.0.0",
 ]
 dynamic = ["version"]
 
