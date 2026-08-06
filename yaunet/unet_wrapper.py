@@ -8,7 +8,11 @@ from .unet import UNet
 
 
 class UNetWrapper(nn.Module):
-    """U-Net shell for wrapping other models."""
+    """
+    U-Net shell for wrapping other models.
+
+    This model is meant to be used for upsampling features from a separate (typically frozen) model.
+    """
 
     def __init__(
         self,
@@ -25,6 +29,14 @@ class UNetWrapper(nn.Module):
         down_block_layer: BlockConstructor = ResNetBlock,
         up_block_layer: BlockConstructor = ResNetBlock,
     ):
+        """
+        Constructor.
+
+        Parameters
+        ----------
+        feature_channels
+            Number of channels to be injected at the bottleneck.
+        """
         super().__init__()
 
         self.unet = UNet(

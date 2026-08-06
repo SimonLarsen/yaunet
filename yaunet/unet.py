@@ -117,6 +117,47 @@ class UNet(nn.Module):
         mid_block_layer: BlockConstructor = ResNetBlock,
         up_block_layer: BlockConstructor | Sequence[BlockConstructor] = ResNetBlock,
     ):
+        """
+        Constructor
+
+        Parameters
+        ----------
+        in_channels
+            Input channels.
+        out_channels
+            Output channels
+        condition_dim
+            Optional conditioning width
+        down_widths
+            Downsample block widths.
+            Ordered from high to low resolution.
+        down_depths
+            Number of blocks per downsample block.
+        mid_width
+            Blottleneck block width.
+        mid_depth
+            Number of blocks in bottleneck.
+        up_widths
+            Upsample block widths.
+            Ordered from low to high resolution.
+            Should have same length as `down_widths`.
+        up_depths
+            Number of blocks per upsample block.
+            Ordered from low to high resolution.
+            Should have same length as `up_depths`.
+        fuse_method
+            Skip connection fusion method.
+        upsample_method
+            Feature upsampling method.
+        interpolation
+            Interpolation method to use when `fuse_method` is `interpolate`.
+        down_block_layer
+            Constructor(s) for downsample blocks.
+        mid_block_layer
+            Constructor for bottleneck blocks.
+        up_block_layer
+            Constructor(s) for upsample blocks.
+        """
         super().__init__()
 
         if not isinstance(down_block_layer, Sequence):
