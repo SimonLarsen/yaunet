@@ -1,9 +1,10 @@
 from torch import Tensor, nn
 
-from .convnext import ConvNextBlock
+from .convnext import ConvNextBlock, ConvNextV2Block
 from .nafnet import NAFNetBlock
 from .resnet import ResNetBlock
 from .restormer import RestormerBlock
+from .dico import DiCoBlock
 
 
 class IdentityBlock(nn.Module):
@@ -22,8 +23,10 @@ class IdentityBlock(nn.Module):
 
 __all__ = [
     "ConvNextBlock",
+    "ConvNextV2Block",
     "IdentityBlock",
     "NAFNetBlock",
     "ResNetBlock",
     "RestormerBlock",
+    "DiCoBlock",
 ]
