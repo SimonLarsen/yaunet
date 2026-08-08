@@ -88,7 +88,7 @@ class GRN(nn.Module):
         self.beta = nn.Parameter(torch.zeros(channels, 1, 1))
 
     def forward(self, x: Tensor) -> Tensor:
-        Gx = torch.norm(x, p=2, dim=(3, 4), keepdim=True)
+        Gx = torch.norm(x, p=2, dim=(2, 3), keepdim=True)
         Nx = Gx / (Gx.mean(dim=1, keepdim=True) + self.eps)
         return self.gamma * (x * Nx) + self.beta * x
 
@@ -142,7 +142,7 @@ class ConvNextV2Block(nn.Module):
         self.norm = norm_layer(channels)
         self.expand = nn.Conv2d(channels, hidden_dim, 1)
         self.act = act_layer()
-        self.grn = GRN(channels)
+        self.grn = GRN(hidden_dim)
         self.contract = nn.Conv2d(hidden_dim, channels, 1)
 
         if condition_dim is not None:
