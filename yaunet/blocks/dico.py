@@ -1,8 +1,8 @@
-from torch import nn, Tensor
+from torch import Tensor, nn
 
-from ..types import ActConstructor, NormConstructor
-from ..norms import LayerNorm2d
 from ..conditioning import ConditionScaleShiftGate
+from ..norms import LayerNorm2d
+from ..types import ActConstructor, NormConstructor
 
 
 class CCA(nn.Module):
@@ -23,6 +23,7 @@ class DiCoBlock(nn.Module):
 
     See https://arxiv.org/abs/2505.11196
     """
+
     def __init__(
         self,
         channels: int,
