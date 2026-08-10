@@ -6,6 +6,7 @@ nav:
   - Models: reference/models.md
   - Blocks: reference/blocks.md
   - Norms: reference/norms.md
+  - Test-time local converter (TLC): reference/tlc.md
 
 theme:
   name: material
