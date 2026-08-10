@@ -3,6 +3,7 @@ from torch import Tensor, nn
 from .convnext import ConvNextBlock, ConvNextV2Block
 from .dico import DiCoBlock
 from .nafnet import NAFNetBlock
+from .nafnext import NAFNextBlock
 from .resnet import ResNetBlock
 from .restormer import RestormerBlock
 
@@ -27,6 +28,7 @@ __all__ = [
     "DiCoBlock",
     "IdentityBlock",
     "NAFNetBlock",
+    "NAFNextBlock",
     "ResNetBlock",
     "RestormerBlock",
 ]
