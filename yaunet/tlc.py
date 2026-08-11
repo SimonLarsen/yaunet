@@ -70,7 +70,7 @@ def _apply(model: nn.Module):
 
 def apply_tlc(
     model: nn.Module,
-    train_size: tuple[int, int, int],
+    train_size: Sequence[int],
 ) -> nn.Module:
     """
     Apply Test-time Local Converter (TLC) to all supported modules in the model.
@@ -85,18 +85,14 @@ def apply_tlc(
     model
         The model to apply TLC to.
     train_size
-        A tuple (C, H, W) specifying the size of the tensors passed to the model
-        during training.
+        A sequence (..., C, H, W) specifying the size of the tensors passed to
+        the model during training, excluding the batch dimension.
 
     Returns
     -------
     model
         The module passed as `model`.
     """
-    if len(train_size) != 3:
-        raise ValueError("train_size should be a (C, H, W) tuple.")
-
-    # Apply replacement recursively
     _apply(model)
 
     param = next(model.parameters())
