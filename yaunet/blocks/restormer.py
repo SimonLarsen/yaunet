@@ -68,7 +68,7 @@ class RestormerBlock(nn.Module):
     """
     Restormer transformer block.
 
-    See: https://arxiv.org/abs/2111.09881
+    See: [https://arxiv.org/abs/2111.09881](https://arxiv.org/abs/2111.09881).
     """
 
     def __init__(

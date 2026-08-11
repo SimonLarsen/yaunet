@@ -10,7 +10,7 @@ class ConvNextBlock(nn.Module):
     """
     ConvNeXt (v1) block.
 
-    See: https://arxiv.org/abs/2201.03545
+    See: [https://arxiv.org/abs/2201.03545](https://arxiv.org/abs/2201.03545).
     """
 
     def __init__(
@@ -97,7 +97,7 @@ class ConvNextV2Block(nn.Module):
     """
     ConvNeXt V2 block.
 
-    See: https://arxiv.org/abs/2301.00808
+    See: [https://arxiv.org/abs/2301.00808](https://arxiv.org/abs/2301.00808).
     """
 
     def __init__(

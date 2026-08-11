@@ -11,9 +11,9 @@ class NAFNextBlock(nn.Module):
     ConvNeXt block where activation and GRN/layer scale is replaced with
     SimpleGate and Simplified Channel Attention from NAFNet.
 
-    * ConvNeXt: https://arxiv.org/abs/2201.03545.
-    * ConvNeXtV2: https://arxiv.org/abs/2301.00808.
-    * NAFNet: https://arxiv.org/abs/2204.04676.
+    * ConvNeXt: [https://arxiv.org/abs/2201.03545](https://arxiv.org/abs/2201.03545).
+    * ConvNeXtV2: [https://arxiv.org/abs/2301.00808](https://arxiv.org/abs/2301.00808).
+    * NAFNet: [https://arxiv.org/abs/2204.04676](https://arxiv.org/abs/2204.04676).
     """
 
     def __init__(

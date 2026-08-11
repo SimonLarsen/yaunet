@@ -1,5 +1,7 @@
 site_name: yaunet
 
+repo_url: https://github.com/SimonLarsen/yaunet
+
 nav:
 - Getting started: index.md
 - Reference:
@@ -10,6 +12,10 @@ nav:
 
 theme:
   name: material
+  palette:
+    scheme: slate
+  icon:
+    repo: fontawesome/brands/github
 
 plugins:
 - search

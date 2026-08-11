@@ -9,7 +9,7 @@ class ResNetBlock(nn.Module):
     """
     ResNet basic block with full pre-activation.
 
-    See: https://arxiv.org/abs/1512.03385
+    See: [https://arxiv.org/abs/1512.03385](https://arxiv.org/abs/1512.03385).
     """
 
     def __init__(

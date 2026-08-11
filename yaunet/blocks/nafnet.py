@@ -28,7 +28,7 @@ class NAFNetBlock(nn.Module):
     """
     NAFNet block.
 
-    See: https://arxiv.org/abs/2204.04676
+    See: [https://arxiv.org/abs/2204.04676](https://arxiv.org/abs/2204.04676).
     """
 
     def __init__(

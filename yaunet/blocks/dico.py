@@ -21,7 +21,7 @@ class DiCoBlock(nn.Module):
     """
     DiCo block.
 
-    See https://arxiv.org/abs/2505.11196
+    See [https://arxiv.org/abs/2505.11196](https://arxiv.org/abs/2505.11196).
     """
 
     def __init__(

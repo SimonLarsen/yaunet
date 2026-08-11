@@ -78,7 +78,7 @@ def apply_tlc(
     Currently only global average pooling (`AdaptiveAvgPool2d` with output size 1)
     is supported.
 
-    See: https://arxiv.org/abs/2112.04491.
+    See: [https://arxiv.org/abs/2112.04491](https://arxiv.org/abs/2112.04491).
 
     Parameters
     ----------
