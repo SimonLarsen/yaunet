@@ -8,6 +8,7 @@ nav:
   - Models: reference/models.md
   - Blocks: reference/blocks.md
   - Norms: reference/norms.md
+  - MLPs: reference/mlps.md
   - Test-time local converter (TLC): reference/tlc.md
 
 theme:

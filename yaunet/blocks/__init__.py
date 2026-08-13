@@ -6,6 +6,7 @@ from .nafnet import NAFNetBlock
 from .nafnext import NAFNextBlock
 from .resnet import ResNetBlock
 from .restormer import RestormerBlock
+from .vit import ViTBlock
 
 
 class IdentityBlock(nn.Module):
@@ -31,4 +32,5 @@ __all__ = [
     "NAFNextBlock",
     "ResNetBlock",
     "RestormerBlock",
+    "ViTBlock",
 ]
