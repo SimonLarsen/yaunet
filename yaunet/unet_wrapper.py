@@ -19,6 +19,7 @@ class UNetWrapper(nn.Module):
         in_channels: int,
         out_channels: int,
         feature_channels: int,
+        condition_dim: int | None = None,
         down_widths: Sequence[int] = (32, 64, 128, 256),
         down_depths: Sequence[int] = (2, 2, 2, 8),
         up_widths: Sequence[int] = (256, 128, 64, 32),
@@ -42,6 +43,7 @@ class UNetWrapper(nn.Module):
         self.unet = UNet(
             in_channels=in_channels,
             out_channels=out_channels,
+            condition_dim=condition_dim,
             down_widths=down_widths,
             down_depths=down_depths,
             up_widths=up_widths,
@@ -56,10 +58,29 @@ class UNetWrapper(nn.Module):
             up_block_layer=up_block_layer,
         )
 
-        self.unet.mid = nn.Identity()
+        self.unet.mid = IdentityBlock(0)
 
-    def forward(self, x: Tensor, features: Tensor) -> Tensor:
-        skips = self.unet.encode(x)
+    def forward(
+        self,
+        x: Tensor,
+        features: Tensor,
+        c: Tensor | None = None,
+    ) -> Tensor:
+        """
+        Define the computation performed at every call.
+
+        Parameters
+        ----------
+        x
+            Full resolution reference image with shape `(B, C, H, W)`
+            where `C` is `in_channels`.
+        features
+            Features to be injected in bottleneck.
+            Should have shape `(B, E, h, w)` where `E` is `feature_channels`.
+        c
+            Optional condition with shape `(B, D)` where `D` is `condition_dim`.
+        """
+        skips = self.unet.encode(x, c)
         skips[-1] = features
-        output = self.unet.decode(skips)
+        output = self.unet.decode(skips, c)
         return self.unet.proj_out(output)

@@ -233,6 +233,16 @@ class UNet(nn.Module):
         return h
 
     def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
+        """
+        Define the computation performed at every call.
+
+        Parameters
+        ----------
+        x
+            Input image with shape `(B, C, H, W)` where `C` is `in_channels.`
+        c
+            Optional condition with shape `(B, D)` where `D` is `condition_dim`.
+        """
         features = self.encode(x, c)
         output = self.decode(features, c)
         return self.proj_out(output)
