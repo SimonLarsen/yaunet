@@ -1,9 +1,13 @@
+from typing import Literal, TypeAlias
+
 import torch
 from torch import Tensor, nn
 
 from ..conditioning import ConditionScaleShiftGate
 from ..norms import LayerNorm2d
 from ..types import ActConstructor, NormConstructor
+
+GRNAggregation: TypeAlias = Literal["avg", "l1", "l2"]
 
 
 class ConvNextBlock(nn.Module):
@@ -80,15 +84,29 @@ class ConvNextBlock(nn.Module):
 
 
 class GRN(nn.Module):
-    def __init__(self, channels: int, eps: float = 1e-6):
+    def __init__(
+        self,
+        channels: int,
+        eps: float = 1e-6,
+        aggregation: GRNAggregation = "l2",
+    ):
         super().__init__()
 
         self.eps = eps
         self.gamma = nn.Parameter(torch.zeros(channels, 1, 1))
         self.beta = nn.Parameter(torch.zeros(channels, 1, 1))
+        self.aggregation = aggregation
 
     def forward(self, x: Tensor) -> Tensor:
-        Gx = torch.norm(x, p=2, dim=(2, 3), keepdim=True)
+        if self.aggregation == "l2":
+            Gx = torch.norm(x, p=2, dim=(2, 3), keepdim=True)
+        elif self.aggregation == "l1":
+            Gx = torch.norm(x, p=1, dim=(2, 3), keepdim=True)
+        elif self.aggregation == "avg":
+            Gx = nn.functional.adaptive_avg_pool2d(x, (1, 1))
+        else:
+            raise ValueError(f"Unknown aggregation method '{self.aggregation}'.")
+
         Nx = Gx / (Gx.mean(dim=1, keepdim=True) + self.eps)
         return self.gamma * (x * Nx) + self.beta * x
 
@@ -106,6 +124,7 @@ class ConvNextV2Block(nn.Module):
         condition_dim: int | None = None,
         kernel_size: int = 7,
         expand_factor: float = 4.0,
+        grn_aggregation: GRNAggregation = "l2",
         norm_layer: NormConstructor = LayerNorm2d,
         act_layer: ActConstructor = nn.SiLU,
     ):
@@ -122,6 +141,9 @@ class ConvNextV2Block(nn.Module):
             Depth-wise convolution kernel size.
         expand_factor
             Inverted bottleneck expansion.
+        grn_aggregation
+            Global aggregation method used in GRN.
+            Defaults to L2 norm used in the original paper.
         norm_layer
             Normalization layer constructor.
         act_layer
@@ -142,7 +164,7 @@ class ConvNextV2Block(nn.Module):
         self.norm = norm_layer(channels)
         self.expand = nn.Conv2d(channels, hidden_dim, 1)
         self.act = act_layer()
-        self.grn = GRN(hidden_dim)
+        self.grn = GRN(hidden_dim, aggregation=grn_aggregation)
         self.contract = nn.Conv2d(hidden_dim, channels, 1)
 
         if condition_dim is not None:
