@@ -113,6 +113,7 @@ class UNet(nn.Module):
         fuse_method: FuseMethod = "concat",
         upsample_method: UpsampleMethod = "pixel-shuffle",
         interpolation: InterpolationMethod = "nearest-exact",
+        wrapper: bool = False,
         down_block_layer: BlockConstructor | Sequence[BlockConstructor] = ResNetBlock,
         mid_block_layer: BlockConstructor = ResNetBlock,
         up_block_layer: BlockConstructor | Sequence[BlockConstructor] = ResNetBlock,
@@ -151,6 +152,10 @@ class UNet(nn.Module):
             Feature upsampling method.
         interpolation
             Interpolation method to use when `fuse_method` is `interpolate`.
+        wrapper
+            Set to True if model should be used as a wrapper.
+            In this case the bottleneck will not receive features directly from
+            the downward path but instead from a tensor `wrap` passed in the `forward` method.
         down_block_layer
             Constructor(s) for downsample blocks.
         mid_block_layer
@@ -173,6 +178,8 @@ class UNet(nn.Module):
 
         assert len(down_widths) == len(up_widths)
 
+        self.wrapper = wrapper
+
         self.down = nn.ModuleList()
         prev_channels = in_channels
         for i in range(len(down_widths)):
@@ -189,11 +196,11 @@ class UNet(nn.Module):
             prev_channels = down_widths[i]
 
         self.mid: nn.Module = DownBlock(
-            in_channels=prev_channels,
+            in_channels=mid_width if wrapper else prev_channels,
             out_channels=mid_width,
             condition_dim=condition_dim,
             depth=mid_depth,
-            downsample=True,
+            downsample=not wrapper,
             block_layer=mid_block_layer,
         )
         prev_channels = mid_width
@@ -217,22 +224,12 @@ class UNet(nn.Module):
 
         self.proj_out = nn.Conv2d(up_widths[-1], out_channels, 1)
 
-    def encode(self, x: Tensor, c: Tensor | None = None) -> list[Tensor]:
-        features = []
-        h = x
-        for block in self.down:
-            h = block(h, c)
-            features.append(h)
-        features.append(self.mid(h, c))
-        return features
-
-    def decode(self, features: Sequence[Tensor], c: Tensor | None = None) -> Tensor:
-        h = features[-1]
-        for i in range(len(self.up)):
-            h = self.up[i](h, features[-2 - i], c)
-        return h
-
-    def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        c: Tensor | None = None,
+        wrap: Tensor | None = None,
+    ) -> Tensor:
         """
         Define the computation performed at every call.
 
@@ -242,7 +239,29 @@ class UNet(nn.Module):
             Input image with shape `(B, C, H, W)` where `C` is `in_channels.`
         c
             Optional condition with shape `(B, D)` where `D` is `condition_dim`.
+        wrap
+            External features to inject at bottleneck.
+            Requires setting `wrapper=True` in constructor.
+            Should have shape `(B, E, h, w)` where `E` is `mid_width` and `(h, w)` is
+            the resolution at bottleneck level.
         """
-        features = self.encode(x, c)
-        output = self.decode(features, c)
-        return self.proj_out(output)
+        features = []
+        h = x
+        for block in self.down:
+            h = block(h, c)
+            features.append(h)
+
+        if self.wrapper:
+            if wrap is None:
+                raise ValueError(
+                    "Model is a wrapper but 'wrap' tensor was not provided."
+                )
+            h = wrap
+
+        h = self.mid(h, c)
+
+        for i in range(len(self.up)):
+            h = self.up[i](h, features[-1 - i], c)
+
+        h = self.proj_out(h)
+        return h

@@ -1,6 +1,6 @@
 [project]
 name = "yaunet"
-description = "A simple, module U-Net implementation in PyTorch."
+description = "A simple, modular U-Net implementation in PyTorch."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
