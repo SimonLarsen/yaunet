@@ -103,7 +103,7 @@ class GRN(nn.Module):
         elif self.aggregation == "l1":
             Gx = torch.norm(x, p=1, dim=(2, 3), keepdim=True)
         elif self.aggregation == "avg":
-            Gx = nn.functional.adaptive_avg_pool2d(x, (1, 1))
+            Gx = nn.functional.adaptive_avg_pool2d(x.relu(), (1, 1))
         else:
             raise ValueError(f"Unknown aggregation method '{self.aggregation}'.")
 
