@@ -15,12 +15,16 @@ class DownBlock(nn.Module):
         condition_dim: int | None = None,
         depth: int = 1,
         downsample: bool = False,
+        overlap_downsample: bool = False,
         block_layer: BlockConstructor = ResNetBlock,
     ):
         super().__init__()
 
         if downsample:
-            self.downsample = nn.Conv2d(in_channels, out_channels, 2, 2)
+            if overlap_downsample:
+                self.downsample = nn.Conv2d(in_channels, out_channels, 3, 2, 1)
+            else:
+                self.downsample = nn.Conv2d(in_channels, out_channels, 2, 2)
         elif in_channels != out_channels:
             self.downsample = nn.Conv2d(in_channels, out_channels, 1)
         else:
@@ -48,6 +52,7 @@ class UpBlock(nn.Module):
         fuse_method: FuseMethod = "concat",
         upsample_method: UpsampleMethod = "pixel-shuffle",
         interpolation: InterpolationMethod = "nearest-exact",
+        overlap_upsample: bool = False,
         block_layer: BlockConstructor = ResNetBlock,
     ):
         super().__init__()
@@ -62,7 +67,12 @@ class UpBlock(nn.Module):
             )
         elif upsample_method == "pixel-shuffle":
             self.upsample = nn.Sequential(
-                nn.Conv2d(in_channels, 4 * skip_channels, 1),
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=4 * skip_channels,
+                    kernel_size=3 if overlap_upsample else 1,
+                    padding=1 if overlap_upsample else 0,
+                ),
                 nn.PixelShuffle(2),
             )
             fuse_in_channels = skip_channels
@@ -104,6 +114,7 @@ class UNet(nn.Module):
         in_channels: int,
         out_channels: int,
         condition_dim: int | None = None,
+        wrapper: bool = False,
         down_widths: Sequence[int] = (32, 64, 128, 256),
         down_depths: Sequence[int] = (2, 2, 2, 8),
         mid_width: int = 512,
@@ -113,7 +124,8 @@ class UNet(nn.Module):
         fuse_method: FuseMethod = "concat",
         upsample_method: UpsampleMethod = "pixel-shuffle",
         interpolation: InterpolationMethod = "nearest-exact",
-        wrapper: bool = False,
+        overlap_downsample: bool = False,
+        overlap_upsample: bool = False,
         down_block_layer: BlockConstructor | Sequence[BlockConstructor] = ResNetBlock,
         mid_block_layer: BlockConstructor = ResNetBlock,
         up_block_layer: BlockConstructor | Sequence[BlockConstructor] = ResNetBlock,
@@ -129,6 +141,10 @@ class UNet(nn.Module):
             Output channels
         condition_dim
             Optional conditioning width
+        wrapper
+            Set to `True` if model should be used as a wrapper.
+            In this case the bottleneck will not receive features directly from
+            the downward path but instead from a tensor `wrap` passed in the `forward` method.
         down_widths
             Downsample block widths.
             Ordered from high to low resolution.
@@ -152,10 +168,10 @@ class UNet(nn.Module):
             Feature upsampling method.
         interpolation
             Interpolation method to use when `fuse_method` is `interpolate`.
-        wrapper
-            Set to True if model should be used as a wrapper.
-            In this case the bottleneck will not receive features directly from
-            the downward path but instead from a tensor `wrap` passed in the `forward` method.
+        overlap_downsample
+            If `True`, downsampling uses an overlapping kernel.
+        overlap_upsample
+            If `True` and `upsample_method` is `'pixel-shuffle'`, upsampling uses an overlapping kernel.
         down_block_layer
             Constructor(s) for downsample blocks.
         mid_block_layer
@@ -190,6 +206,7 @@ class UNet(nn.Module):
                     condition_dim=condition_dim,
                     depth=down_depths[i],
                     downsample=i > 0,
+                    overlap_downsample=overlap_downsample,
                     block_layer=down_block_layer[i],
                 )
             )
@@ -201,6 +218,7 @@ class UNet(nn.Module):
             condition_dim=condition_dim,
             depth=mid_depth,
             downsample=not wrapper,
+            overlap_downsample=overlap_downsample,
             block_layer=mid_block_layer,
         )
         prev_channels = mid_width
@@ -217,6 +235,7 @@ class UNet(nn.Module):
                     fuse_method=fuse_method,
                     upsample_method=upsample_method,
                     interpolation=interpolation,
+                    overlap_upsample=overlap_upsample,
                     block_layer=up_block_layer[i],
                 )
             )

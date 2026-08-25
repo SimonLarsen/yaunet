@@ -43,4 +43,3 @@ BlockConstructor: TypeAlias = Callable[[int, int | None], nn.Module]
 NormConstructor: TypeAlias = Callable[[int], nn.Module]
 ActConstructor: TypeAlias = Callable[[], nn.Module]
 MLPConstructor: TypeAlias = Callable[[int], nn.Module]
-
