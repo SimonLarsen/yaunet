@@ -13,10 +13,13 @@ nav:
 
 theme:
   name: material
-  palette:
-    scheme: slate
   icon:
     repo: fontawesome/brands/github
+  features:
+  - navigation.tabs
+  - navigation.tabs.sticky
+  palette:
+    scheme: slate
 
 plugins:
 - search
@@ -40,6 +43,9 @@ plugins:
             ignore_init_summary: true
           show_source: false
           docstring_section_style: list
+        inventories:
+        - https://docs.python.org/3/objects.inv
+        - https://docs.pytorch.org/docs/master/objects.inv
 
 markdown_extensions:
 - pymdownx.highlight:
