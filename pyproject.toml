@@ -9,6 +9,20 @@ dependencies = [
     "torch>=2.0.0",
 ]
 dynamic = ["version"]
+authors = [
+    { name = "Simon J. Larsen", email = "simonhffh@gmail.com" },
+]
+maintainers = [
+    { name = "Simon J. Larsen", email = "simonhffh@gmail.com" },
+]
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["pytorch", "u-net"]
+
+[project.urls]
+Documentation = "https://yaunet.readthedocs.io"
+Repository = "https://github.com/SimonLarsen/yaunet.git"
+Issues = "https://github.com/SimonLarsen/yaunet/issues"
 
 [build-system]
 requires = ["setuptools"]
