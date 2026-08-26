@@ -141,4 +141,6 @@ print(pred.shape)  # torch.Size([2, 3, 256, 256])
 
 ## References
 
-<a id="ref1">[1] Peebles, William, and Saining Xie. "Scalable diffusion models with transformers." *2023 IEEE/CVF International Conference on Computer Vision (ICCV)*. IEEE, 2023.</a>
+<ul class="ul-bib">
+<li id="ref1">[1] Peebles, William, and Saining Xie. "Scalable diffusion models with transformers." <i>2023 IEEE/CVF International Conference on Computer Vision (ICCV)</i>. IEEE, 2023.</li>
+</ul>

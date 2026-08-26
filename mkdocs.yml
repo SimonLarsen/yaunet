@@ -2,6 +2,9 @@ site_name: yaunet
 
 repo_url: https://github.com/SimonLarsen/yaunet
 
+extra_css:
+- stylesheets/extra.css
+
 nav:
 - Getting started: index.md
 - Reference:
@@ -13,6 +16,9 @@ nav:
 
 theme:
   name: material
+  font:
+    text: Roboto
+    code: Cascadia Code
   icon:
     repo: fontawesome/brands/github
   features:
