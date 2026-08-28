@@ -75,8 +75,7 @@ def apply_tlc(
     """
     Apply Test-time Local Converter (TLC) to all supported modules in the model.
 
-    Currently only global average pooling (`AdaptiveAvgPool2d` with output size 1)
-    is supported.
+    Currently only global average pooling ([`AdaptiveAvgPool2d`][torch.nn.AdaptiveAvgPool2d] with output size 1) is supported.
 
     See: [https://arxiv.org/abs/2112.04491](https://arxiv.org/abs/2112.04491).
 
@@ -85,7 +84,7 @@ def apply_tlc(
     model
         The model to apply TLC to.
     train_size
-        A sequence (..., C, H, W) specifying the size of the tensors passed to
+        A sequence `(..., C, H, W)` specifying the size of the tensors passed to
         the model during training, excluding the batch dimension.
 
     Returns
