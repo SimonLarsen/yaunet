@@ -1,6 +1,7 @@
 site_name: yaunet
 
 repo_url: https://github.com/SimonLarsen/yaunet
+repo_name: SimonLarsen/yaunet
 
 extra_css:
 - stylesheets/extra.css
@@ -20,10 +21,11 @@ theme:
     text: Roboto
     code: Cascadia Code
   icon:
-    repo: fontawesome/brands/github
+    repo: fontawesome/brands/github-alt
   features:
   - navigation.tabs
   - navigation.tabs.sticky
+  - navigation.footer
   palette:
     scheme: slate
 

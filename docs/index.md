@@ -1,6 +1,7 @@
 ---
 hide:
 - navigation
+- footer
 ---
 
 --8<-- "README.md:1:15"
