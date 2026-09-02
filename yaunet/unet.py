@@ -60,6 +60,8 @@ class UpBlock(nn.Module):
         self.fuse_method = fuse_method
 
         fuse_in_channels = in_channels
+        fuse_skip_channels = skip_channels
+
         if upsample_method == "interpolate":
             self.upsample = nn.Upsample(
                 scale_factor=2,
@@ -69,22 +71,27 @@ class UpBlock(nn.Module):
             self.upsample = nn.Sequential(
                 nn.Conv2d(
                     in_channels=in_channels,
-                    out_channels=4 * skip_channels,
+                    out_channels=4 * out_channels,
                     kernel_size=3 if overlap_upsample else 1,
                     padding=1 if overlap_upsample else 0,
                 ),
                 nn.PixelShuffle(2),
             )
-            fuse_in_channels = skip_channels
+            fuse_in_channels = out_channels
         else:
             raise ValueError(f"Unknown upsample method {upsample_method}")
 
-        self.fuse_proj = nn.Identity()
+        self.fuse_in_proj = nn.Identity()
+        self.fuse_skip_proj = nn.Identity()
         if fuse_method == "add":
-            if fuse_in_channels != skip_channels:
-                self.fuse_proj = nn.Conv2d(fuse_in_channels, skip_channels, 1)
+            if fuse_in_channels != out_channels:
+                self.fuse_in_proj = nn.Conv2d(fuse_in_channels, out_channels, 1)
+            if fuse_skip_channels != out_channels:
+                self.fuse_skip_proj = nn.Conv2d(fuse_skip_channels, out_channels, 1)
         elif fuse_method == "concat":
-            self.fuse = nn.Conv2d(fuse_in_channels + skip_channels, out_channels, 1)
+            self.fuse = nn.Conv2d(
+                fuse_in_channels + fuse_skip_channels, out_channels, 1
+            )
         else:
             raise ValueError(f"Unknown fuse method {fuse_method}")
 
@@ -93,13 +100,13 @@ class UpBlock(nn.Module):
             self.blocks.append(block_layer(out_channels, condition_dim))
 
     def forward(self, x: Tensor, x_skip: Tensor, c: Tensor | None = None) -> Tensor:
-        h = self.fuse_proj(self.upsample(x))
+        x = self.fuse_in_proj(self.upsample(x))
+        x_skip = self.fuse_skip_proj(x_skip)
 
         if self.fuse_method == "add":
-            h = (h + x_skip) / 2**0.5
+            h = (x + x_skip) / 2**0.5
         elif self.fuse_method == "concat":
-            h = torch.cat((h, x_skip), dim=1)
-            h = self.fuse(h)
+            h = self.fuse(torch.cat((x, x_skip), dim=1))
 
         for block in self.blocks:
             h = block(h, c)
