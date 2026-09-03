@@ -4,7 +4,7 @@ hide:
 - footer
 ---
 
---8<-- "README.md:1:15"
+--8<-- "README.md:1:17"
 
 ## Usage
 
