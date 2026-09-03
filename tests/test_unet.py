@@ -1,14 +1,14 @@
 import torch
 
-from yaunet.types import FuseMethod, UpsampleMethod
+from yaunet.types import DownsampleMethod, FuseMethod, UpsampleMethod
 from yaunet.unet import UNet
 
 
 def test_unet_concat():
     x = torch.randn(1, 3, 256, 256)
 
-    for fuse_method, upsample_method in zip(
-        FuseMethod.__args__, UpsampleMethod.__args__
+    for fuse_method, downsample_method, upsample_method in zip(
+        FuseMethod.__args__, DownsampleMethod.__args__, UpsampleMethod.__args__
     ):
         model = UNet(
             in_channels=3,

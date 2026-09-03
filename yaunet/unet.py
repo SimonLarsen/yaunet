@@ -4,7 +4,13 @@ import torch
 from torch import Tensor, nn
 
 from .blocks import ResNetBlock
-from .types import BlockConstructor, FuseMethod, InterpolationMethod, UpsampleMethod
+from .types import (
+    BlockConstructor,
+    DownsampleMethod,
+    FuseMethod,
+    InterpolationMethod,
+    UpsampleMethod,
+)
 
 
 class DownBlock(nn.Module):
@@ -15,27 +21,37 @@ class DownBlock(nn.Module):
         condition_dim: int | None = None,
         depth: int = 1,
         downsample: bool = False,
+        downsample_method: DownsampleMethod = "conv",
         overlap_downsample: bool = False,
         block_layer: BlockConstructor = ResNetBlock,
     ):
         super().__init__()
 
+        self.downsample = nn.Identity()
+        self.proj = nn.Identity()
+
+        proj_channels = in_channels
+
         if downsample:
-            if overlap_downsample:
-                self.downsample = nn.Conv2d(in_channels, out_channels, 3, 2, 1)
-            else:
-                self.downsample = nn.Conv2d(in_channels, out_channels, 2, 2)
-        elif in_channels != out_channels:
-            self.downsample = nn.Conv2d(in_channels, out_channels, 1)
-        else:
-            self.downsample = nn.Identity()
+            if downsample_method == "conv":
+                if overlap_downsample:
+                    self.downsample = nn.Conv2d(in_channels, out_channels, 3, 2, 1)
+                else:
+                    self.downsample = nn.Conv2d(in_channels, out_channels, 2, 2)
+                proj_channels = out_channels
+
+            elif downsample_method == "avg-pool":
+                self.downsample = nn.AvgPool2d(2, 2)
+
+        if proj_channels != out_channels:
+            self.proj = nn.Conv2d(proj_channels, out_channels, 1)
 
         self.blocks = nn.ModuleList()
         for _ in range(depth):
             self.blocks.append(block_layer(out_channels, condition_dim))
 
     def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
-        h = self.downsample(x)
+        h = self.proj(self.downsample(x))
         for block in self.blocks:
             h = block(h, c)
         return h
@@ -129,6 +145,7 @@ class UNet(nn.Module):
         up_widths: Sequence[int] = (256, 128, 64, 32),
         up_depths: Sequence[int] = (2, 2, 2, 2),
         fuse_method: FuseMethod = "concat",
+        downsample_method: DownsampleMethod = "conv",
         upsample_method: UpsampleMethod = "pixel-shuffle",
         interpolation: InterpolationMethod = "nearest-exact",
         overlap_downsample: bool = False,
@@ -171,6 +188,8 @@ class UNet(nn.Module):
             Should have same length as `up_depths`.
         fuse_method
             Skip connection fusion method.
+        downsample_method
+            Feature downsampling method.
         upsample_method
             Feature upsampling method.
         interpolation
@@ -213,6 +232,7 @@ class UNet(nn.Module):
                     condition_dim=condition_dim,
                     depth=down_depths[i],
                     downsample=i > 0,
+                    downsample_method=downsample_method,
                     overlap_downsample=overlap_downsample,
                     block_layer=down_block_layer[i],
                 )
@@ -225,6 +245,7 @@ class UNet(nn.Module):
             condition_dim=condition_dim,
             depth=mid_depth,
             downsample=not wrapper,
+            downsample_method=downsample_method,
             overlap_downsample=overlap_downsample,
             block_layer=mid_block_layer,
         )

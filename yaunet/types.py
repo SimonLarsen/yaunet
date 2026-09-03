@@ -15,6 +15,18 @@ concat
     Fuse by concatenation followed by linear projection.
 """
 
+DownsampleMethod: TypeAlias = Literal["conv", "avg-pool"]
+"""
+Methods for downsampling features.
+
+Attributes
+----------
+conv
+    Stride convolution.
+avg-pool
+    Average pooling followed py linear projection.
+"""
+
 UpsampleMethod: TypeAlias = Literal["interpolate", "pixel-shuffle"]
 """
 Methods for upsampling features.
