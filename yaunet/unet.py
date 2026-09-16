@@ -271,6 +271,29 @@ class UNet(nn.Module):
 
         self.proj_out = nn.Conv2d(up_widths[-1], out_channels, 1)
 
+    def encode(
+        self,
+        x: Tensor,
+        c: Tensor | None = None,
+    ) -> list[Tensor]:
+        features = []
+        h = x
+        for block in self.down:
+            h = block(h, c)
+            features.append(h)
+        return features
+
+    def decode(
+        self,
+        h: Tensor,
+        features: Sequence[Tensor],
+        c: Tensor | None = None,
+    ) -> Tensor:
+        for i in range(len(self.up)):
+            h = self.up[i](h, features[-1 - i], c)
+        h = self.proj_out(h)
+        return h
+
     def forward(
         self,
         x: Tensor,
@@ -278,7 +301,7 @@ class UNet(nn.Module):
         wrap: Tensor | None = None,
     ) -> Tensor:
         """
-        Define the computation performed at every call.
+        The `UNet` model forward method.
 
         Parameters
         ----------
@@ -292,11 +315,7 @@ class UNet(nn.Module):
             Should have shape `(B, E, h, w)` where `E` is `mid_width` and `(h, w)` is
             the resolution at bottleneck level.
         """
-        features = []
-        h = x
-        for block in self.down:
-            h = block(h, c)
-            features.append(h)
+        features = self.encode(x, c)
 
         if self.wrapper:
             if wrap is None:
@@ -304,11 +323,9 @@ class UNet(nn.Module):
                     "Model is a wrapper but 'wrap' tensor was not provided."
                 )
             h = wrap
+        else:
+            h = features[-1]
 
         h = self.mid(h, c)
 
-        for i in range(len(self.up)):
-            h = self.up[i](h, features[-1 - i], c)
-
-        h = self.proj_out(h)
-        return h
+        return self.decode(h, features, c)
