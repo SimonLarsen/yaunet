@@ -5,6 +5,7 @@ from torch.nn.functional import scaled_dot_product_attention
 from ..conditioning import ConditionScaleShiftGate
 from ..mlp import MLP
 from ..norms import LayerNorm2d
+from ..rope import apply_rope
 from ..types import ActConstructor, MLPConstructor, NormConstructor
 
 
@@ -20,13 +21,21 @@ class Attention(nn.Module):
         self.to_qkv = nn.Conv2d(channels, 3 * channels, 1)
         self.proj_out = nn.Conv2d(channels, channels, 1)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        rope_cos_sin: tuple[Tensor, Tensor] | None = None,
+    ) -> Tensor:
         q, k, v = rearrange(
             self.to_qkv(x),
             "b (qkv nh hd) h w -> qkv b nh (h w) hd",
             qkv=3,
             hd=self.head_dim,
         )
+
+        if rope_cos_sin is not None:
+            q, k = apply_rope(q, k, *rope_cos_sin)
+
         o = scaled_dot_product_attention(q, k, v)
         o = rearrange(o, "b nh (h w) hd -> b (nh hd) h w", w=x.size(-1))
         o = self.proj_out(o)
@@ -79,7 +88,21 @@ class ViTBlock(nn.Module):
             self.cond_proj1 = ConditionScaleShiftGate(condition_dim, channels)
             self.cond_proj2 = ConditionScaleShiftGate(condition_dim, channels)
 
-    def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        c: Tensor | None = None,
+        rope_cos_sin: tuple[Tensor, Tensor] | None = None,
+    ) -> Tensor:
+        """
+        Forward method.
+
+        Parameters
+        ----------
+        rope_cos_sin
+            Optional cosine/sine values to use for RoPE.
+            Should have shape `(S, head_dim)` where `S` is the sequence length.
+        """
         if c is not None:
             scale1, shift1, gate1 = self.cond_proj1(c)
             scale2, shift2, gate2 = self.cond_proj2(c)
@@ -88,7 +111,7 @@ class ViTBlock(nn.Module):
             scale2, shift2, gate2 = 0.0, 0.0, 1.0
 
         h = self.norm1(x) * (1 + scale1) + shift1
-        h = self.attn(h)
+        h = self.attn(h, rope_cos_sin)
         x = x + h * gate1
 
         h = self.norm2(x) * (1 + scale2) + shift2

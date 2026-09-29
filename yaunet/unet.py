@@ -1,4 +1,5 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import torch
 from torch import Tensor, nn
@@ -50,10 +51,15 @@ class DownBlock(nn.Module):
         for _ in range(depth):
             self.blocks.append(block_layer(out_channels, condition_dim))
 
-    def forward(self, x: Tensor, c: Tensor | None = None) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        c: Tensor | None = None,
+        **kwargs,
+    ) -> Tensor:
         h = self.proj(self.downsample(x))
         for block in self.blocks:
-            h = block(h, c)
+            h = block(h, c, **kwargs)
         return h
 
 
@@ -115,7 +121,13 @@ class UpBlock(nn.Module):
         for _ in range(depth):
             self.blocks.append(block_layer(out_channels, condition_dim))
 
-    def forward(self, x: Tensor, x_skip: Tensor, c: Tensor | None = None) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        x_skip: Tensor,
+        c: Tensor | None = None,
+        **kwargs,
+    ) -> Tensor:
         x = self.fuse_in_proj(self.upsample(x))
         x_skip = self.fuse_skip_proj(x_skip)
 
@@ -125,7 +137,7 @@ class UpBlock(nn.Module):
             h = self.fuse(torch.cat((x, x_skip), dim=1))
 
         for block in self.blocks:
-            h = block(h, c)
+            h = block(h, c, **kwargs)
         return h
 
 
@@ -275,11 +287,12 @@ class UNet(nn.Module):
         self,
         x: Tensor,
         c: Tensor | None = None,
+        **kwargs,
     ) -> list[Tensor]:
         features = []
         h = x
         for block in self.down:
-            h = block(h, c)
+            h = block(h, c, **kwargs)
             features.append(h)
         return features
 
@@ -288,9 +301,10 @@ class UNet(nn.Module):
         h: Tensor,
         features: Sequence[Tensor],
         c: Tensor | None = None,
+        **kwargs,
     ) -> Tensor:
         for i in range(len(self.up)):
-            h = self.up[i](h, features[-1 - i], c)
+            h = self.up[i](h, features[-1 - i], c, **kwargs)
         h = self.proj_out(h)
         return h
 
@@ -299,6 +313,9 @@ class UNet(nn.Module):
         x: Tensor,
         c: Tensor | None = None,
         wrap: Tensor | None = None,
+        down_block_kwargs: Mapping[str, Any] | None = None,
+        mid_block_kwargs: Mapping[str, Any] | None = None,
+        up_block_kwargs: Mapping[str, Any] | None = None,
     ) -> Tensor:
         """
         The `UNet` model forward method.
@@ -314,8 +331,21 @@ class UNet(nn.Module):
             Requires setting `wrapper=True` in constructor.
             Should have shape `(B, E, h, w)` where `E` is `mid_width` and `(h, w)` is
             the resolution at bottleneck level.
+        down_block_kwargs
+            Keyword arguments to be passed to each down block.
+        mid_block_kwargs
+            Keyword arguments to be passed to each mid block.
+        up_block_kwargs
+            Keyword arguments to be passed to each up block.
         """
-        features = self.encode(x, c)
+        if down_block_kwargs is None:
+            down_block_kwargs = {}
+        if mid_block_kwargs is None:
+            mid_block_kwargs = {}
+        if up_block_kwargs is None:
+            up_block_kwargs = {}
+
+        features = self.encode(x, c, **down_block_kwargs)
 
         if self.wrapper:
             if wrap is None:
@@ -326,6 +356,6 @@ class UNet(nn.Module):
         else:
             h = features[-1]
 
-        h = self.mid(h, c)
+        h = self.mid(h, c, **mid_block_kwargs)
 
-        return self.decode(h, features, c)
+        return self.decode(h, features, c, *up_block_kwargs)
